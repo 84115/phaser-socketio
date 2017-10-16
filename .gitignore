@@ -1,0 +1,7 @@
+node_modules
+build
+*.log
+*.tmp
+
+static/assets/tile/omega-compiled\.csv
+
