@@ -4,7 +4,7 @@
   "description": "phaser-socket-demo",
   "main": "src/index.js",
   "scripts": {
-    "prestart": "babel-node server/index.js",
+    "prestart": "node index.js",
     "start": "gulp",
     "production": "gulp --production"
   },
@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "babel-cli": "^6.26.0",
+    "express": "^4.16.2",
     "nodemon": "^1.12.1",
     "phaser": "^2.4.7",
     "socket.io": "^2.0.3"
