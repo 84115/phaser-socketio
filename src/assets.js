@@ -63,14 +63,6 @@ export default {
     type: 'image'
   },
   {
-    key: 'ship',
-    type: 'image'
-  },
-  {
-    key: 'planet',
-    type: 'image'
-  },
-  {
     //  Example: Add a spritesheet texture.
     //
     //  If `url` is omitted, a pattern `<key>.png` is assumed.
@@ -85,10 +77,6 @@ export default {
   },
   {
     key: 'star',
-    type: 'image'
-  },
-  {
-    key: 'stone-breakable',
     type: 'image'
   },
   {
