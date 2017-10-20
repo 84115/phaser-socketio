@@ -16,7 +16,7 @@ var players = {}
 
 io.on('connection', function(socket) {
 
-    console.log('connected client:', socket.id)
+    // console.log('connected client:', socket.id)
 
     socket.emit('joinPlayer', {
         players: players,
@@ -29,21 +29,25 @@ io.on('connection', function(socket) {
 
         io.sockets.emit('removePlayer', socket.id)
 
-        console.log('disconnected client:', socket.id)
+        // console.log('disconnected client:', socket.id)
 
-        console.log('players@'+Object.keys(players).length, players);
+        // console.log('a!players@'+Object.keys(players).length, players);
     })
 
     socket.on('addPlayer', function(data) {
         players[data.socket] = data
 
-        console.log('players@'+Object.keys(players).length, players);
+        // console.log('b!players@'+Object.keys(players).length, players);
 
         io.sockets.emit('addPlayer', data)
     })
 
-    setInterval(function(){
-        io.sockets.emit('poll', players)
-    }, 1000)
+    socket.on('poll', function(data){
+        players[data.socket] = data;
+
+        // console.log(players)
+
+        socket.broadcast.emit('poll', players)
+    })
 
 })

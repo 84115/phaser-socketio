@@ -48,6 +48,13 @@ export default class GameState extends Phaser.State
             if (data.socket != player.socket) {
                 scope.addPlayer(game, data, players);
             }
+
+            socket.emit('poll', {
+                socket: player.socket,
+                x: player.x,
+                y: player.y,
+                tint: player.tint
+            });
         });
 
         socket.on('removePlayer', function(id) {
@@ -57,13 +64,22 @@ export default class GameState extends Phaser.State
         });
 
         socket.on('poll', function(data) {
+            socket.emit('poll', {
+                socket: player.socket,
+                x: player.x,
+                y: player.y,
+                tint: player.tint
+            });
+
             for (var existing in data) {
                 if (data.hasOwnProperty(existing) && player.socket != existing) {
+                    // console.log(data[existing]);
                     var updater = data[existing];
                     var updatee = players.iterate('socket', updater.socket, Phaser.Group.RETURN_CHILD);
-                    console.log('poll', updater, updatee);
-                    updatee.body.x = updater.x;
-                    updatee.body.y = updater.y;
+                    // console.log('poll', updater, updatee);
+                    updatee.x = updater.x;
+                    updatee.y = updater.y;
+                    // console.log(updatee)
                 }
             }
         });
