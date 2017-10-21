@@ -3,26 +3,28 @@ import Dude from 'objects/Dude';
 
 let url = window.location.protocol + '//' + window.location.hostname + ':3002'
 
+var player;
+var players;
+
 export default class GameState extends Phaser.State
 {
 
     create()
     {
-        var game = this.game;
-        var scope = this;
+        var self = this;
 
-        var player = new Player(game, 0, 3000, 'dude_sheet');
+        player = new Player(self.game, 0, 3000, 'dude_sheet');
         player.tint = Math.random() * 0xffffff;
 
-        var players = game.add.group();
-        // game.physics.arcade.enable(players);
-        // game.physics.arcade.collide(players);
+        players = self.game.add.group();
 
-        game.camera.follow(player, Phaser.Camera.FOLLOW_LOCKON);
+        self.game.physics.arcade.collide(players);
 
-        var socket = io.connect(url);
+        self.game.camera.follow(player, Phaser.Camera.FOLLOW_LOCKON);
 
-        socket.on('joinPlayer', function(data) {
+        self.socket = io.connect(url);
+
+        self.socket.on('joinPlayer', function(data) {
             player.socket = data.socket;
 
             console.log('PLAYER:', player.socket);
@@ -32,58 +34,43 @@ export default class GameState extends Phaser.State
                 // && that it isn't the player
                 if (data.players.hasOwnProperty(existing) && player.socket != existing) {
                     var newby = data.players[existing];
-                    scope.addPlayer(game, newby, players);
+                    self.addPlayer(self.game, newby, players);
                 }
             }
 
-            socket.emit('addPlayer', {
-                socket: player.socket,
-                x: player.x,
-                y: player.y,
-                tint: player.tint
-            });
+            self.socket.emit('addPlayer', self.schema(player));
         });
 
-        socket.on('addPlayer', function(data) {
+        self.socket.on('addPlayer', function(data) {
             if (data.socket != player.socket) {
-                scope.addPlayer(game, data, players);
+                self.addPlayer(self.game, data, players);
             }
 
-            socket.emit('poll', {
-                socket: player.socket,
-                x: player.x,
-                y: player.y,
-                tint: player.tint
-            });
+            self.socket.emit('poll', self.schema(player));
         });
 
-        socket.on('removePlayer', function(id) {
-            var ditcher = players.iterate('socket', id, Phaser.Group.RETURN_CHILD);
+        self.socket.on('removePlayer', function(id) {
+            var ditcher = self.findPlayerById(players, id);
 
             players.remove(ditcher);
         });
 
-        socket.on('poll', function(data) {
-            socket.emit('poll', {
-                socket: player.socket,
-                x: player.x,
-                y: player.y,
-                tint: player.tint
-            });
+        self.socket.on('poll', function(data) {
+            self.socket.emit('poll', self.schema(player));
 
             for (var existing in data) {
                 if (data.hasOwnProperty(existing) && player.socket != existing) {
-                    // console.log(data[existing]);
                     var updater = data[existing];
                     var updatee = players.iterate('socket', updater.socket, Phaser.Group.RETURN_CHILD);
-                    // console.log('poll', updater, updatee);
-                    updatee.x = updater.x;
-                    updatee.y = updater.y;
-                    // console.log(updatee)
+
+                    self.game.physics.arcade.moveToXY(updatee, updater.x, updater.y, 25, 25);
+
+                    updatee.setAnimation(updater.facing);
                 }
             }
         });
 
+        self.socket.on('disconnect', self.destroyPlayers);
     }
 
     render()
@@ -93,6 +80,7 @@ export default class GameState extends Phaser.State
 
     update()
     {
+        this.game.physics.arcade.collide(player, players);
     }
 
     addPlayer(game, data, group)
@@ -104,10 +92,26 @@ export default class GameState extends Phaser.State
         group.add(dude);
     }
 
+    destroyPlayers()
+    {
+        players.forEach(function(item) {
+            item.destroy();
+        });
+    }
+
+    findPlayerById(group, id)
+    {
+        return group.iterate('socket', id, Phaser.Group.RETURN_CHILD);
+    }
+
     schema(object)
     {
         return {
-
+            socket: object.socket,
+            x: object.x,
+            y: object.y,
+            facing: object.facing,
+            tint: object.tint
         }
     }
 }

@@ -84,12 +84,4 @@ export default class Player extends Dude
         this.rightKey = this.game.input.keyboard.addKey(Phaser.Keyboard.D);
     }
 
-    setAnimation(animation='idle')
-    {
-        if (this.facing != animation) {
-            this.animations.play(animation);
-            this.facing = animation;
-        }
-    }
-
 }
