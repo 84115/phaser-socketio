@@ -1,117 +1,118 @@
 import Player from 'objects/Player';
 import Dude from 'objects/Dude';
 
-let url = window.location.protocol + '//' + window.location.hostname + ':3002'
-
-var player;
-var players;
+let url = window.location.protocol + '//' + window.location.hostname + ':' + window.location.port
 
 export default class GameState extends Phaser.State
 {
 
     create()
     {
+        this.createPlayer();
+        this.createPlayers();
+        this.createSockets();
+    }
+
+    createPlayer()
+    {
+        this.player = new Player(this.game, 0, 0, 'dude_sheet');
+        this.player.tint = Math.random() * 0xffffff;
+    }
+
+    createPlayers()
+    {
+        this.players = this.game.add.group();
+    }
+
+    createSockets()
+    {
         var self = this;
-
-        player = new Player(self.game, 0, 3000, 'dude_sheet');
-        player.tint = Math.random() * 0xffffff;
-
-        players = self.game.add.group();
-
-        self.game.physics.arcade.collide(players);
-
-        self.game.camera.follow(player, Phaser.Camera.FOLLOW_LOCKON);
 
         self.socket = io.connect(url);
 
-        self.socket.on('joinPlayer', function(data) {
-            player.socket = data.socket;
+        self.socket.on('joinPlayer', function(data)
+        {
+            self.player.uuid = data.uuid;
 
-            console.log('PLAYER:', player.socket);
+            self.forEachExistingPlayer(data.players, function(existing_player)
+            {
+                self.addPlayer(existing_player);
+            });
 
-            for (var existing in data.players) {
-                // check if the property/_ is defined in the object itself, not in parent
-                // && that it isn't the player
-                if (data.players.hasOwnProperty(existing) && player.socket != existing) {
-                    var newby = data.players[existing];
-                    self.addPlayer(self.game, newby, players);
-                }
-            }
-
-            self.socket.emit('addPlayer', self.schema(player));
+            self.socket.emit('addPlayer', self.player.schema());
         });
 
-        self.socket.on('addPlayer', function(data) {
-            if (data.socket != player.socket) {
-                self.addPlayer(self.game, data, players);
+        self.socket.on('addPlayer', function(data)
+        {
+            if (data.uuid != self.player.uuid)
+            {
+                self.addPlayer(data);
             }
 
-            self.socket.emit('poll', self.schema(player));
+            // Polling begins here!
+            self.socket.emit('poll', self.player.schema());
         });
 
-        self.socket.on('removePlayer', function(id) {
-            var ditcher = self.findPlayerById(players, id);
+        self.socket.on('removePlayer', function(uuid)
+        {
+            var ditcher = self.findPlayerByUuid(uuid);
 
-            players.remove(ditcher);
+            self.players.remove(ditcher);
         });
 
-        self.socket.on('poll', function(data) {
-            self.socket.emit('poll', self.schema(player));
+        self.socket.on('poll', function(data)
+        {
+            self.forEachExistingPlayer(data, function(diff)
+            {
+                var local_player = self.findPlayerByUuid(diff.uuid);
 
-            for (var existing in data) {
-                if (data.hasOwnProperty(existing) && player.socket != existing) {
-                    var updater = data[existing];
-                    var updatee = players.iterate('socket', updater.socket, Phaser.Group.RETURN_CHILD);
+                local_player.moveToXY(diff.x, diff.y);
+                local_player.setAnimation(diff.facing);
+            });
 
-                    self.game.physics.arcade.moveToXY(updatee, updater.x, updater.y, 25, 25);
-
-                    updatee.setAnimation(updater.facing);
-                }
-            }
+            self.socket.emit('poll', self.player.schemaPoll());
         });
 
         self.socket.on('disconnect', self.destroyPlayers);
     }
 
-    render()
-    {
-        this.game.debug.text("This is debug text", 50, 50);
-    }
-
     update()
     {
-        this.game.physics.arcade.collide(player, players);
+        this.game.physics.arcade.collide(this.player, this.players);
     }
 
-    addPlayer(game, data, group)
+    addPlayer(data)
     {
-        var dude = new Dude(game, data.x, data.y, 'dude_sheet');
-        dude.tint = data.tint;
-        dude.socket = data.socket;
+        var dude = new Dude(this.game, data.x, data.y, 'dude_sheet');
 
-        group.add(dude);
+        dude.tint = data.tint;
+        dude.uuid = data.uuid;
+
+        this.players.add(dude);
     }
 
     destroyPlayers()
     {
-        players.forEach(function(item) {
+        this.players.forEach(function(item)
+        {
             item.destroy();
         });
     }
 
-    findPlayerById(group, id)
+    findPlayerByUuid(uuid)
     {
-        return group.iterate('socket', id, Phaser.Group.RETURN_CHILD);
+        return this.players.iterate('uuid', uuid, Phaser.Group.RETURN_CHILD);
     }
 
-    schema(object)
+    forEachExistingPlayer(player_update, callback)
     {
-        return {
-            socket: object.socket,
-            x: object.x,
-            y: object.y,
-            facing: object.facing,
-            tint: object.tint
+        for (var existing in player_update)
+        {
+            if (player_update.hasOwnProperty(existing) && this.player.uuid != existing)
+            {
+                callback(player_update[existing]);
+            }
         }
     }
+
 }

@@ -31,4 +31,30 @@ export default class Dude extends Phaser.Sprite
         }
     }
 
+    moveToXY(x, y)
+    {
+        this.game.physics.arcade.moveToXY(this, x, y, 25, 25);
+    }
+
+    schema(object)
+    {
+        return {
+            uuid: this.uuid,
+            x: Math.round(this.x),
+            y: Math.round(this.y),
+            facing: this.facing,
+            tint: this.tint
+        }
+    }
+
+    schemaPoll(object)
+    {
+        return {
+            uuid: this.uuid,
+            x: Math.round(this.x),
+            y: Math.round(this.y),
+            facing: this.facing
+        }
+    }
+
 }

@@ -1,7 +1,6 @@
 let express = require('express')
 let socket = require('socket.io')
-let R = require('ramda')
-
+let uuid = require('uuid')
 let app = express()
 
 let server = app.listen(3002, function() {
@@ -14,40 +13,33 @@ let io = socket(server)
 
 var players = {}
 
-io.on('connection', function(socket) {
+io.on('connection', function(client) {
 
-    // console.log('connected client:', socket.id)
+    let id = uuid()
 
-    socket.emit('joinPlayer', {
-        players: players,
-        socket: socket.id
-    });
+    console.log('connected client:', id)
+
+    client.emit('joinPlayer', { uuid: id, players: players })
 
     // Disconnect listener
-    socket.on('disconnect', function() {
-        delete players[socket.id]
+    client.on('disconnect', function() {
+        delete players[id]
 
-        io.sockets.emit('removePlayer', socket.id)
+        io.sockets.emit('removePlayer', id)
 
-        // console.log('disconnected client:', socket.id)
-
-        // console.log('a!players@'+Object.keys(players).length, players);
+        console.log('disconnected client:', id)
     })
 
-    socket.on('addPlayer', function(data) {
-        players[data.socket] = data
+    client.on('addPlayer', function(data) {
+        players[data.uuid] = data
 
-        // console.log('b!players@'+Object.keys(players).length, players);
-
-        io.sockets.emit('addPlayer', data)
+        client.broadcast.emit('addPlayer', data)
     })
 
-    socket.on('poll', function(data){
-        players[data.socket] = data;
+    client.on('poll', function(data){
+        players[data.uuid] = data
 
-        // console.log(players)
-
-        socket.broadcast.emit('poll', players)
+        client.broadcast.emit('poll', players)
     })
 
 })
