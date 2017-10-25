@@ -48,9 +48,6 @@ export default class GameState extends Phaser.State
             {
                 self.addPlayer(data);
             }
-
-            // Polling begins here!
-            self.socket.emit('poll', self.player.schema());
         });
 
         self.socket.on('removePlayer', function(uuid)
@@ -70,7 +67,7 @@ export default class GameState extends Phaser.State
                 local_player.setAnimation(diff.facing);
             });
 
-            self.socket.emit('poll', self.player.schemaPoll());
+            // self.socket.emit('poll', self.player.schema());
         });
 
         self.socket.on('disconnect', self.destroyPlayers);
@@ -78,6 +75,11 @@ export default class GameState extends Phaser.State
 
     update()
     {
+        if (this.player.uuid)
+        {
+            this.socket.emit('poll', this.player.schema());
+        }
+
         this.game.physics.arcade.collide(this.player, this.players);
     }
 

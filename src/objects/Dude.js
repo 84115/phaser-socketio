@@ -47,14 +47,4 @@ export default class Dude extends Phaser.Sprite
         }
     }
 
-    schemaPoll(object)
-    {
-        return {
-            uuid: this.uuid,
-            x: Math.round(this.x),
-            y: Math.round(this.y),
-            facing: this.facing
-        }
-    }
-
 }
