@@ -26,51 +26,13 @@ export default class GameState extends Phaser.State
 
     createSockets()
     {
-        var self = this;
+        this.socket = io.connect(url);
 
-        self.socket = io.connect(url);
-
-        self.socket.on('joinPlayer', function(data)
-        {
-            self.player.uuid = data.uuid;
-
-            self.forEachExistingPlayer(data.players, function(existing_player)
-            {
-                self.addPlayer(existing_player);
-            });
-
-            self.socket.emit('addPlayer', self.player.schema());
-        });
-
-        self.socket.on('addPlayer', function(data)
-        {
-            if (data.uuid != self.player.uuid)
-            {
-                self.addPlayer(data);
-            }
-        });
-
-        self.socket.on('removePlayer', function(uuid)
-        {
-            var ditcher = self.findPlayerByUuid(uuid);
-
-            self.players.remove(ditcher);
-        });
-
-        self.socket.on('poll', function(data)
-        {
-            self.forEachExistingPlayer(data, function(diff)
-            {
-                var local_player = self.findPlayerByUuid(diff.uuid);
-
-                local_player.moveToXY(diff.x, diff.y);
-                local_player.setAnimation(diff.facing);
-            });
-
-            // self.socket.emit('poll', self.player.schema());
-        });
-
-        self.socket.on('disconnect', self.destroyPlayers);
+        this.socketOn('joinPlayer', this.socketJoinPlayer);
+        this.socketOn('addPlayer', this.socketAddPlayer);
+        this.socketOn('removePlayer', this.socketRemovePlayer);
+        this.socketOn('poll', this.socketUpdatePlayerPositions);
+        this.socketOn('disconnect', this.socketDestroyPlayers);
     }
 
     update()
@@ -93,14 +55,6 @@ export default class GameState extends Phaser.State
         this.players.add(dude);
     }
 
-    destroyPlayers()
-    {
-        this.players.forEach(function(item)
-        {
-            item.destroy();
-        });
-    }
-
     findPlayerByUuid(uuid)
     {
         return this.players.iterate('uuid', uuid, Phaser.Group.RETURN_CHILD);
@@ -115,6 +69,55 @@ export default class GameState extends Phaser.State
                 callback(player_update[existing]);
             }
         }
+    }
+
+    socketOn(socketString, method)
+    {
+        this.socket.on(socketString, method.bind(this));
+    }
+
+    socketJoinPlayer(data)
+    {
+        this.player.uuid = data.uuid;
+
+        this.forEachExistingPlayer(data.players, existing_player => this.addPlayer(existing_player));
+
+        this.socket.emit('addPlayer', this.player.schema());
+    }
+
+    socketAddPlayer(data)
+    {
+        if (data.uuid != this.player.uuid)
+        {
+            this.addPlayer(data);
+        }
+    }
+
+    socketRemovePlayer(uuid)
+    {
+        var ditcher = this.findPlayerByUuid(uuid);
+
+        this.players.remove(ditcher);
+    }
+
+    socketUpdatePlayerPositions(data)
+    {
+        var self = this;
+
+        this.forEachExistingPlayer(data, function(diff)
+        {
+            var other_players = self.findPlayerByUuid(diff.uuid);
+
+            if (other_players.updateSchema)
+            {
+                other_players.updateSchema(diff);
+            }
+        });
+    }
+
+    socketDestroyPlayers()
+    {
+        this.players.forEach(item => item.destroy());
     }
 
 }

@@ -23,6 +23,12 @@ export default class Dude extends Phaser.Sprite
         this.body.collideWorldBounds = true;
     }
 
+    updateSchema(diff)
+    {
+        this.moveToXY(diff.x, diff.y);
+        this.setAnimation(diff.facing);
+    }
+
     setAnimation(animation='idle')
     {
         if (this.facing != animation) {
