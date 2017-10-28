@@ -11,20 +11,12 @@ import Dude from 'objects/Dude';
 export default class Player extends Dude
 {
 
-    constructor(game, x, y, key, frame)
+    constructor(game, x=0, y=0, key='dude_sheet')
     {
-        super(game, x, y, key, frame);
+        super(game, x, y, key);
 
-        this.setHealth(75);
-        this.setControls();
-        this.body.setSize(20, 32, 5, 16);
-        this.animations.add('left', [0, 1, 2, 3], 9, true);
-        this.animations.add('turn', [4], 20, true);
-        this.animations.add('right', [5, 6, 7, 8], 9, true);
-        this.animations.add('idle', [4], 20);
-
-        // this.body.allowGravity = true;
-        // this.body.gravity.y = 800;
+        this.createHealth(75);
+        this.createControls();
 
         game.add.existing(this);
     }
@@ -65,18 +57,13 @@ export default class Player extends Dude
         }
     }
 
-    render()
-    {
-
-    }
-
-    setHealth(health)
+    createHealth(health)
     {
         this.health = health;
         this.maxHealth = this.health;
     }
 
-    setControls()
+    createControls()
     {
         this.upKey = this.game.input.keyboard.addKey(Phaser.Keyboard.W);
         this.leftKey = this.game.input.keyboard.addKey(Phaser.Keyboard.A);

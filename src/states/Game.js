@@ -1,9 +1,8 @@
+import SocketState from 'states/Socket';
 import Player from 'objects/Player';
 import Dude from 'objects/Dude';
 
-let url = window.location.protocol + '//' + window.location.hostname + ':' + window.location.port
-
-export default class GameState extends Phaser.State
+export default class GameState extends SocketState
 {
 
     create()
@@ -15,8 +14,7 @@ export default class GameState extends Phaser.State
 
     createPlayer()
     {
-        this.player = new Player(this.game, 0, 0, 'dude_sheet');
-        this.player.tint = Math.random() * 0xffffff;
+        this.player = new Player(this.game);
     }
 
     createPlayers()
@@ -26,20 +24,19 @@ export default class GameState extends Phaser.State
 
     createSockets()
     {
-        this.socket = io.connect(url);
-
+        this.socketConnect();
         this.socketOn('joinPlayer', this.socketJoinPlayer);
         this.socketOn('addPlayer', this.socketAddPlayer);
         this.socketOn('removePlayer', this.socketRemovePlayer);
         this.socketOn('poll', this.socketUpdatePlayerPositions);
-        this.socketOn('disconnect', this.socketDestroyPlayers);
+        this.socketOn('disconnect', this.socketRemovePlayers);
     }
 
     update()
     {
         if (this.player.uuid)
         {
-            this.socket.emit('poll', this.player.schema());
+            this.socketEmit('poll', this.player.schema());
         }
 
         this.game.physics.arcade.collide(this.player, this.players);
@@ -47,12 +44,14 @@ export default class GameState extends Phaser.State
 
     addPlayer(data)
     {
-        var dude = new Dude(this.game, data.x, data.y, 'dude_sheet');
+        var player = new Dude(this.game, data.x, data.y);
 
-        dude.tint = data.tint;
-        dude.uuid = data.uuid;
+        player.tint = data.tint;
+        player.uuid = data.uuid;
 
-        this.players.add(dude);
+        this.players.add(player);
+
+        return player;
     }
 
     findPlayerByUuid(uuid)
@@ -71,18 +70,15 @@ export default class GameState extends Phaser.State
         }
     }
 
-    socketOn(socketString, method)
-    {
-        this.socket.on(socketString, method.bind(this));
-    }
-
     socketJoinPlayer(data)
     {
         this.player.uuid = data.uuid;
 
-        this.forEachExistingPlayer(data.players, existing_player => this.addPlayer(existing_player));
+        this.forEachExistingPlayer(data.players, player => this.addPlayer(player));
 
-        this.socket.emit('addPlayer', this.player.schema());
+        this.socketEmit('addPlayer', this.player.schema());
+
+        return this;
     }
 
     socketAddPlayer(data)
@@ -91,6 +87,8 @@ export default class GameState extends Phaser.State
         {
             this.addPlayer(data);
         }
+
+        return this;
     }
 
     socketRemovePlayer(uuid)
@@ -98,26 +96,32 @@ export default class GameState extends Phaser.State
         var ditcher = this.findPlayerByUuid(uuid);
 
         this.players.remove(ditcher);
+
+        return this;
     }
 
     socketUpdatePlayerPositions(data)
     {
         var self = this;
 
-        this.forEachExistingPlayer(data, function(diff)
+        this.forEachExistingPlayer(data, function(player)
         {
-            var other_players = self.findPlayerByUuid(diff.uuid);
+            var other_players = self.findPlayerByUuid(player.uuid);
 
             if (other_players.updateSchema)
             {
-                other_players.updateSchema(diff);
+                other_players.updateSchema(player);
             }
         });
+
+        return this;
     }
 
-    socketDestroyPlayers()
+    socketRemovePlayers()
     {
-        this.players.forEach(item => item.destroy());
+        this.players.forEach(player => player.kill());
+
+        return this;
     }
 
 }
