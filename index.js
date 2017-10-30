@@ -31,15 +31,19 @@ io.on('connection', function(client) {
     })
 
     client.on('addPlayer', function(data) {
-        players[data.uuid] = data
+        if (!players[data.uuid]) {
+            players[data.uuid] = data
 
-        client.broadcast.emit('addPlayer', data)
+            client.broadcast.emit('addPlayer', data)
+        }
     })
 
     client.on('poll', function(data){
-        players[data.uuid] = data
+        if (players[data.uuid]) {
+            players[data.uuid] = data
 
-        client.broadcast.emit('poll', players)
+            client.broadcast.emit('poll', players)
+        }
     })
 
 })
